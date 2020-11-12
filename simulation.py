@@ -240,6 +240,7 @@ class Simulation:
         P_arr=1/(epsilon_0*eps_rel*mu_0)*L_arr
         # C_arr=np.linalg.inv(P_arr)
         C_arr=np.linalg.inv(P_arr)
+        C_arr[0,:,:]=np.linalg.inv(P_arr[0,:,:])#fix for strange error in matrix inversion
         #L_inv=np.linalg.inv(L_arr)
         #C_arr=(epsilon_0*eps_rel*mu_0)*L_inv
         G_arr=np.reshape(self.get_em().get_sigma_diel(), (num_freq,1,1))/(epsilon_0*eps_rel)*C_arr

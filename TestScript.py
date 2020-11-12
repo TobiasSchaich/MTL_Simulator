@@ -20,8 +20,8 @@ if __name__=='__main__':
     #wir1=geometry.CoatedWire((-0.54*1e-3,0))
     wir1=geometry.Wire((-0.45*1e-3,0))
     # wir2=geometry.CoatedWire((0.54*1e-3,0))
-    wir2=geometry.Wire((0.45,0))
-    # wir3=geometry.Wire((-0.45*1e-3,2*1e-3))
+    wir2=geometry.Wire((0.45*1e-3,0))
+    wir3=geometry.Wire((-0.45*1e-3,2*1e-3))
     # wir4=geometry.Wire((0.45*1e-3,2*1e-3))
     
     #pair up wires
@@ -37,6 +37,7 @@ if __name__=='__main__':
     # geo.add_pair(pair2)
     geo.add_wire(wir1)
     geo.add_wire(wir2)
+    geo.add_wire(wir3)
     geo.plot_geometry()
     #geo.add_wire(wir3)
     #set em env
