@@ -17,8 +17,8 @@ if __name__=='__main__':
     
     cable_length=1
     # defines wires
-    wir1=geometry.CoatedWire((-0.54*1e-3,0))
-    # wir1=geometry.Wire((-0.45*1e-3,0))
+    #wir1=geometry.CoatedWire((-0.54*1e-3,0))
+    wir1=geometry.Wire((-0.45*1e-3,0))
     #wir2=geometry.CoatedWire((0.54*1e-3,0))
     # wir3=geometry.Wire((-0.45*1e-3,2*1e-3))
     #wir4=geometry.Wire((0.45*1e-3,2*1e-3))
@@ -40,12 +40,12 @@ if __name__=='__main__':
     #set em env
     
     #freq=np.logspace(7,9,200)
-    freq=np.linspace(1e9,8e9, 1001)
+    freq=np.linspace(1e9,8e9, 100)
     eps_r=1#2.25
     em=em_env.EmEnv(freq,eps_rel=eps_r)
 
     # set up simulation
-    Nsamples=cable_length*2
+    Nsamples=cable_length*10
     sim=simulation.Simulation(geo, em, Nsamples)
     abcd=sim.run()
     #s = rf.a2s(abcd)

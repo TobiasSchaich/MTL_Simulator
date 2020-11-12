@@ -125,19 +125,22 @@ class Simulation:
 
     def _sommer(self): 
         '''calculates propagation constant for SW on uncoated wire'''
-
-        radii=[wir.get_radius() for wir in self.get_geo().get_all_wires()]
-        sigs=[wir.get_sigma() for wir in self.get_geo().get_all_wires()]
-        if all([radii[0]==val for val in radii]):
-             radius=radii[0]
-        else:
-            raise NotImplementedError("Wires with unequal radii not yet implemented")
-        if all([sigs[0]==val for val in sigs]):
-            sigma=sigs[0]
-        else:
-            raise NotImplementedError("Wires with unequal sigma not yet implemented")     
-        be,ga=self._single_wire_sommer(sigma, radius)
-        return np.array([be,ga])
+        if self._identical_wires_flag:
+            radius=self.get_geo().get_all_wires()[0].get_radius()
+            sigma=self.get_geo().get_all_wires()[0].get_sigma()
+            be,ga=self._single_wire_sommer(sigma, radius)
+            return np.array([be,ga])
+        else: 
+            num_wires=self.get_geo().get_num_wires_total()
+            radii=[wir.get_radius() for wir in self.get_geo().get_all_wires()]
+            sigs=[wir.get_sigma() for wir in self.get_geo().get_all_wires()]
+            num_freq=np.size(self.get_em().get_freq())
+            results=np.zeros((2,num_freq,num_wires)) # axis0=be,ga, axis1=freq points, axis2=wire
+            for idx in range(num_wires):
+                be,ga=self._single_wire_sommer(sigs[idx], radii[idx])
+                results[0,:,idx]=be
+                results[1,:,idx]=ga
+            return results
     
     def _single_wire_sommer(self,sigma, radius):
         freq=self.get_em().get_freq()
@@ -146,7 +149,7 @@ class Simulation:
         w=2*pi*freq   
         k0=w/c
         ec =  1- 1j * sigma/w/epsilon_0;
-        be=0.9*k0
+        be=0.9*k0*ed
         ga = np.sqrt(ed*k0**2 - be**2);   
         N=1 #counter
         while True: #iterative method to approximate gamma
