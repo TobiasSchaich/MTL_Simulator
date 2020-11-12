@@ -20,10 +20,6 @@ class Simulation:
         self.set_em(em)
         self.set_zsamples(zsamples)
         
-        
-        
-        
-        
     def set_geo(self, geo):
         if isinstance(geo, geometry.Geometry):
             self._geo=geo
@@ -101,7 +97,6 @@ class Simulation:
         g = np.sqrt(be**2-(k0**2)*ed);
         return np.array([be,gd,g])
 
-    
     def sommer(self): 
         '''calculates propagation constant for SW on coated wire'''
         def J01(z):
@@ -245,6 +240,7 @@ class Simulation:
         elif mode=='coated':
             self._rclg_function=self._calculate_rclg_coated 
         elif mode=='mixed':
+            print("Warning: Experimental Mode - not yet checked for errors")
             raise NotImplementedError("Coated wires solution not yet implemented")
         else:
             raise ValueError("Mode should be of type uncoated, coated or mixed only")
@@ -256,7 +252,7 @@ class Simulation:
         num_freq=np.size(f)
         f=np.reshape(f,(num_freq,1,1))
         num_wires=self.get_geo().get_num_wires_total()
-
+        
         abcd=np.tile(np.eye(2*num_wires,2*num_wires), (num_freq, 1, 1))
         abcd = abcd.astype(np.complex128, copy=False)
         z_values,dz=np.linspace(0, self.get_geo().get_length(), self.get_zsamples(), endpoint=False, retstep=True)
