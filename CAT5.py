@@ -9,13 +9,13 @@ import geometry
 import em_env 
 import simulation
 import numpy as np
-import abcd2s
+import sparameter
 
 if __name__=='__main__':
     #input
-    cable_length=2 #metres
-    #freq=np.logspace(6,8.7, 100)
-    freq=np.linspace(1e7,1e8,2)
+    cable_length=100 #metres
+    freq=np.logspace(6,8.7, 100)
+    #freq=np.linspace(1e7,1e8,2)
     eps_r=2.25
     loss_tan=0.002
     # defines wires
@@ -51,4 +51,5 @@ if __name__=='__main__':
     # set up simulation
     sim=simulation.Simulation(geo, em, 400*cable_length)
     abcd=sim.run()
-    s=abcd2s.abcd2s(abcd)
+    s=sparameter.Sparameter()
+    s.create_from_abcd(freq, abcd)

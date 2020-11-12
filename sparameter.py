@@ -104,7 +104,7 @@ class Sparameter:
             for i in range(self.get_num_ports()):
                 for j in range(self.get_num_ports()):
                     plt.plot(f,20*np.log10(np.abs(s[:,i,j])), label=f'S{i+1}{j+1}')
-            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')		
+            #plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')		
             plt.xlabel('Frequency (Hz)')
             plt.ylabel('Magnitude (dB)')
             plt.grid(True)

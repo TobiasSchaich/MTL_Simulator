@@ -203,13 +203,13 @@ class Simulation:
         pos=pos_wires+pos_pairs
      
         L_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init
-        L_self=(mu_0/(2*pi*radius))*np.real(1j/ga**2*hankel1(0,ga*radius))/np.real(1j/ga*hankel1(1,ga*radius));#values for each frequency
+        L_self=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*radius)/hankel1(1,ga*radius);#values for each frequency
         L_arr=L_arr*np.reshape(L_self, (num_freq,1,1))
         #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples   
      
         for ind1 in range(num_cond):
              for ind2 in range((ind1+1),num_cond):
-                 L_arr[:,ind1,ind2]=(mu_0/(2*pi*radius))*(np.real(1j/ga**2*hankel1(0,ga*np.linalg.norm(pos[ind1]-pos[ind2])))/np.real(1j/ga*hankel1(1,ga*radius)));
+                 L_arr[:,ind1,ind2]=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*np.linalg.norm(pos[ind1]-pos[ind2]))/hankel1(1,ga*radius);
                  L_arr[:,ind2,ind1]=L_arr[:,ind1,ind2]
         #P=1/(epsilon_0*self.get_em().get_eps_rel()*mu_0)*L_arr;
         #C=np.linalg.inv(P);
