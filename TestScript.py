@@ -52,5 +52,7 @@ if __name__=='__main__':
     
     s=sparameter.Sparameter()
     s.create_from_abcd(freq, abcd)
-    s.plot()
+    #s.plot()
     ntw = rf.Network(frequency=freq, s=s.get_s())
+    ntw.renormalize(400)
+    ntw.plot_s_db()

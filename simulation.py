@@ -12,6 +12,14 @@ from scipy.constants import mu_0, epsilon_0, c, pi
 from scipy.linalg import expm
 
 
+    
+def J01(z):
+    P0 = 1 - 9/2./(8*z)**2 
+    Q0 = -1./(8*z)
+    P1 = 1 + 15/2./(8*z)**2 
+    Q1 = 3./(8*z)        
+    return 1j*(P0 + 1j*Q0)/(P1 + 1j*Q1);
+
 
 class Simulation:
     """Simulation environment combining EM Environment and Geometry"""
@@ -19,6 +27,7 @@ class Simulation:
         self.set_geo(geo)
         self.set_em(em)
         self.set_zsamples(zsamples)
+        self._identical_wires_flag=False
         
     def set_geo(self, geo):
         if isinstance(geo, geometry.Geometry):
@@ -46,6 +55,22 @@ class Simulation:
             
     def get_zsamples(self):
         return self._zsamples
+    
+    def run(self):
+        #check mode
+        self._chk_geo()
+        mode=self._get_mode() # coated,uncoated,mixed if geometry consists of respective wires types
+        if mode=='uncoated':
+            self._rclg_function=self._calculate_rclg_uncoated 
+        elif mode=='coated':
+            self._rclg_function=self._calculate_rclg_coated 
+        elif mode=='mixed':
+            print("Warning: Experimental Mode - not yet checked for errors")
+            raise NotImplementedError("Coated wires solution not yet implemented")
+        else:
+            raise ValueError("Mode should be of type uncoated, coated or mixed only")
+        abcd=self._run_in_mode()    #pass correct function for given mode
+        return abcd     
     
     def goubau(self): 
         '''calculates propagation constant for SW on coated wire'''
@@ -97,18 +122,10 @@ class Simulation:
         g = np.sqrt(be**2-(k0**2)*ed);
         return np.array([be,gd,g])
 
-    def sommer(self): 
-        '''calculates propagation constant for SW on coated wire'''
-        def J01(z):
-            P0 = 1 - 9/2./(8*z)**2 
-            Q0 = -1./(8*z)
-            P1 = 1 + 15/2./(8*z)**2 
-            Q1 = 3./(8*z)        
-            return 1j*(P0 + 1j*Q0)/(P1 + 1j*Q1);
-    
-        freq=self.get_em().get_freq()
-        ed=self.get_em().get_eps_rel()
-        tol=1e-10# iteration tolerance
+
+    def _sommer(self): 
+        '''calculates propagation constant for SW on uncoated wire'''
+
         radii=[wir.get_radius() for wir in self.get_geo().get_all_wires()]
         sigs=[wir.get_sigma() for wir in self.get_geo().get_all_wires()]
         if all([radii[0]==val for val in radii]):
@@ -119,6 +136,13 @@ class Simulation:
             sigma=sigs[0]
         else:
             raise NotImplementedError("Wires with unequal sigma not yet implemented")     
+        be,ga=self._single_wire_sommer(sigma, radius)
+        return np.array([be,ga])
+    
+    def _single_wire_sommer(self,sigma, radius):
+        freq=self.get_em().get_freq()
+        ed=self.get_em().get_eps_rel()
+        tol=1e-10# iteration tolerance
         w=2*pi*freq   
         k0=w/c
         ec =  1- 1j * sigma/w/epsilon_0;
@@ -184,7 +208,16 @@ class Simulation:
         return R_arr, C_arr, L_arr, G_arr                
         
     def _calculate_rclg_uncoated(self, z): 
-        be,ga=self.sommer()
+        if self._identical_wires_flag:
+            return self._rclg_identical_uncoated(z)
+        else:
+            raise NotImplementedError("RCLG calculation for unidentical wires not yet there.")
+            return self._rclg_unidentical_uncoated(z)
+            
+        
+        
+    def _rclg_identical_uncoated(self, z):
+        be,ga=self._sommer()
         num_cond=self.get_geo().get_num_wires_total()   
         num_freq=np.size(self.get_em().get_freq())
         #all radii are equal for now
@@ -214,6 +247,8 @@ class Simulation:
         delta=np.sqrt(1/(pi*self.get_em().get_freq()*mu_0*sigma));
         R_arr=np.tile(np.eye(num_cond),(num_freq,1,1))*np.reshape(1/(2*pi*radius*delta*sigma), (num_freq,1,1));
         return R_arr, C_arr, L_arr, G_arr
+    
+    
         
     def _get_mode(self):
         if all([wir.get_wiretype()=='coated' for wir in self.get_geo().get_all_wires()]):
@@ -225,27 +260,28 @@ class Simulation:
             raise NotImplementedError("Mixed Geometries with uncoated and coated wires not yet implemented.")
         return mode
     
+    def _chk_identical_wires(self):
+        mode=self._get_mode()
+        if mode=='mixed': #mix of coated and uncoated wires
+            self._identical_wires_flag=False
+            return
+        radii=[wir.get_radius() for wir in self.get_geo().get_all_wires()]
+        sigs=[wir.get_sigma() for wir in self.get_geo().get_all_wires()]
+        ident_radii_flag=all(r==radii[0] for r in radii)
+        ident_sigma_flag=all(sig==sigs[0] for sig in sigs)
+        if ident_radii_flag and ident_sigma_flag:
+            self._identical_wires_flag=True
+            print("All wires identical. Optimised solver will be used.")
+        else:
+            self._identical_wires_flag=False
+    
     def _chk_geo(self):
         if self.get_geo().get_num_wires_total()==0:
             raise ValueError("No wires defined in geometry.")
-        else: 
-            print("Geometry OK")
+        self._chk_identical_wires()            
+        print("Geometry OK")
     
-    def run(self):
-        #check mode
-        self._chk_geo()
-        mode=self._get_mode() # coated,uncoated,mixed if geometry consists of respective wires types
-        if mode=='uncoated':
-            self._rclg_function=self._calculate_rclg_uncoated 
-        elif mode=='coated':
-            self._rclg_function=self._calculate_rclg_coated 
-        elif mode=='mixed':
-            print("Warning: Experimental Mode - not yet checked for errors")
-            raise NotImplementedError("Coated wires solution not yet implemented")
-        else:
-            raise ValueError("Mode should be of type uncoated, coated or mixed only")
-        abcd=self._run_in_mode()    #pass correct function for given mode
-        return abcd     
+
             
     def _run_in_mode(self):
         f=self.get_em().get_freq()
