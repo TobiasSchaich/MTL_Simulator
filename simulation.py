@@ -216,22 +216,17 @@ class Simulation:
         else:
             raise NotImplementedError("RCLG calculation for unidentical wires not yet there.")
             return self._rclg_unidentical_uncoated(z)
-            
-        
         
     def _rclg_identical_uncoated(self, z):
         be,ga=self._sommer()
+        eps_rel=self.get_em().get_eps_rel()
         num_cond=self.get_geo().get_num_wires_total()   
         num_freq=np.size(self.get_em().get_freq())
         #all radii are equal for now
         radius=self.get_geo().get_all_wires()[0].get_radius()
         sigma=self.get_geo().get_all_wires()[0].get_sigma()
         # get wire positions
-        pos_wires=[np.array(self.get_geo().get_wire(idx).get_position()) for idx in range(self.get_geo().get_num_single_wires())]
-        pos_pairs=[np.transpose(self.get_geo().get_pair(idx).get_xy(z)) for idx in range(self.get_geo().get_num_pairs())]
-        pos_pairs=[np.hsplit(np.ravel(pos_pairs[idx]),2) for idx in range(self.get_geo().get_num_pairs())]
-        pos_pairs=[val for wir in pos_pairs for val in wir] # flatten list
-        pos=pos_wires+pos_pairs
+        pos=self.get_geo().get_all_positions(z) #wire positions as list of (2,) numpy arrays carrying x and y information
      
         L_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init
         L_self=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*radius)/hankel1(1,ga*radius);#values for each frequency
@@ -240,18 +235,47 @@ class Simulation:
      
         for ind1 in range(num_cond):
              for ind2 in range((ind1+1),num_cond):
-                 L_arr[:,ind1,ind2]=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*np.linalg.norm(pos[ind1]-pos[ind2]))/hankel1(1,ga*radius);
+                 L_arr[:,ind1,ind2]=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*np.linalg.norm(pos[ind1]-pos[ind2]))/hankel1(1,ga*radius)
                  L_arr[:,ind2,ind1]=L_arr[:,ind1,ind2]
-        #P=1/(epsilon_0*self.get_em().get_eps_rel()*mu_0)*L_arr;
-        #C=np.linalg.inv(P);
-        L_inv=np.linalg.inv(L_arr)
-        C_arr=(epsilon_0*self.get_em().get_eps_rel()*mu_0)*L_inv
-        G_arr=np.reshape(mu_0*self.get_em().get_sigma_diel(), (num_freq,1,1))*L_inv; 
-        delta=np.sqrt(1/(pi*self.get_em().get_freq()*mu_0*sigma));
-        R_arr=np.tile(np.eye(num_cond),(num_freq,1,1))*np.reshape(1/(2*pi*radius*delta*sigma), (num_freq,1,1));
+        P_arr=1/(epsilon_0*eps_rel*mu_0)*L_arr
+        # C_arr=np.linalg.inv(P_arr)
+        C_arr=np.linalg.inv(P_arr)
+        #L_inv=np.linalg.inv(L_arr)
+        #C_arr=(epsilon_0*eps_rel*mu_0)*L_inv
+        G_arr=np.reshape(self.get_em().get_sigma_diel(), (num_freq,1,1))/(epsilon_0*eps_rel)*C_arr
+        delta=np.sqrt(1/(pi*self.get_em().get_freq()*mu_0*sigma))
+        R_arr=np.tile(np.eye(num_cond),(num_freq,1,1))*np.reshape(1/(2*pi*radius*delta*sigma), (num_freq,1,1))
         return R_arr, C_arr, L_arr, G_arr
     
-    
+    # def _rclg_unidentical_uncoated(self, z):
+    #     propa=self._sommer() # propagation array axis0-be,ga, axis1-frequency, axis2-wire
+    #     num_cond=self.get_geo().get_num_wires_total()   
+    #     num_freq=np.size(self.get_em().get_freq())
+    #     radii=[wir.get_radius() for wir in self.get_geo().get_all_wires()]
+    #     sigs=[wir.get_sigma() for wir in self.get_geo().get_all_wires()]
+    #     pos_wires=[np.array(self.get_geo().get_wire(idx).get_position()) for idx in range(self.get_geo().get_num_single_wires())]
+    #     pos_pairs=[np.transpose(self.get_geo().get_pair(idx).get_xy(z)) for idx in range(self.get_geo().get_num_pairs())]
+    #     pos_pairs=[np.hsplit(np.ravel(pos_pairs[idx]),2) for idx in range(self.get_geo().get_num_pairs())]
+    #     pos_pairs=[val for wir in pos_pairs for val in wir] # flatten list
+    #     pos=pos_wires+pos_pairs #wire positions as list of numpy arrays of shape (2,) carrying x and y information
+     
+    #     L_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init
+    #     #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples   
+     
+    #     for ind1 in range(num_cond):
+    #          for ind2 in range(num_cond):
+    #              if ind1!=ind2
+    #                  L_arr[:,ind1,ind2]=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*np.linalg.norm(pos[ind1]-pos[ind2]))/hankel1(1,ga*radius);
+    #              else:
+    #                  L_arr[:,ind1,ind2]=
+    #     #P=1/(epsilon_0*self.get_em().get_eps_rel()*mu_0)*L_arr;
+    #     #C=np.linalg.inv(P);
+    #     L_inv=np.linalg.inv(L_arr)
+    #     C_arr=(epsilon_0*self.get_em().get_eps_rel()*mu_0)*L_inv
+    #     G_arr=np.reshape(mu_0*self.get_em().get_sigma_diel(), (num_freq,1,1))*L_inv; 
+    #     delta=np.sqrt(1/(pi*self.get_em().get_freq()*mu_0*sigma));
+    #     R_arr=np.tile(np.eye(num_cond),(num_freq,1,1))*np.reshape(1/(2*pi*radius*delta*sigma), (num_freq,1,1));
+    #     return R_arr, C_arr, L_arr, G_arr
         
     def _get_mode(self):
         if all([wir.get_wiretype()=='coated' for wir in self.get_geo().get_all_wires()]):

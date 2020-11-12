@@ -184,6 +184,15 @@ class Geometry:
             wires.append(self.get_pair(idx).get_wires()[0])
             wires.append(self.get_pair(idx).get_wires()[1])
         return wires
+    
+    def get_all_positions(self, z):
+        """Returns list of numpy arrays of shape (2,) carrying x and y position of wires at z.Returns first single wires then pairs"""
+        pos_wires=[np.array(self.get_wire(idx).get_position()) for idx in range(self.get_num_single_wires())]
+        pos_pairs=[np.transpose(self.get_pair(idx).get_xy(z)) for idx in range(self.get_num_pairs())]
+        pos_pairs=[np.hsplit(np.ravel(pos_pairs[idx]),2) for idx in range(self.get_num_pairs())]
+        pos_pairs=[val for wir in pos_pairs for val in wir] # flatten list
+        pos=pos_wires+pos_pairs
+        return pos
             
     
     def get_radii(self):
