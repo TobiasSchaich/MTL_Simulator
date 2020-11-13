@@ -95,6 +95,7 @@ class Sparameter:
             plt.xlabel('Frequency (Hz)')
             plt.ylabel(f'S{ports[0]}{ports[1]} (dB)')
             plt.grid(True)
+            plt.show()
         else:
             raise TypeError("ports must either be of type none or a tuple of ports to be plotted ")
 	
@@ -108,4 +109,5 @@ class Sparameter:
             plt.xlabel('Frequency (Hz)')
             plt.ylabel('Magnitude (dB)')
             plt.grid(True)
+            plt.show()
             

@@ -237,9 +237,8 @@ class Simulation:
                  L_arr[:,ind1,ind2]=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*np.linalg.norm(pos[ind1]-pos[ind2]))/hankel1(1,ga*radius)
                  L_arr[:,ind2,ind1]=L_arr[:,ind1,ind2]
         P_arr=1/(epsilon_0*eps_rel*mu_0)*L_arr
-        # C_arr=np.linalg.inv(P_arr)
         C_arr=np.linalg.inv(P_arr)
-        C_arr[0,:,:]=np.linalg.inv(P_arr[0,:,:])#fix for strange error in matrix inversion
+        C_arr[0,:,:]=np.linalg.inv(P_arr[0,:,:])#fix for strange error in matrix inversion on my desktop only
         #L_inv=np.linalg.inv(L_arr)
         #C_arr=(epsilon_0*eps_rel*mu_0)*L_inv
         G_arr=np.reshape(self.get_em().get_sigma_diel(), (num_freq,1,1))/(epsilon_0*eps_rel)*C_arr
@@ -274,6 +273,7 @@ class Simulation:
         #P=1/(epsilon_0*self.get_em().get_eps_rel()*mu_0)*L_arr;
         #C=np.linalg.inv(P);
         L_inv=np.linalg.inv(L_arr)
+        L_inv[0,:,:]=np.linalg.inv(L_arr[0,:,:])#fix for strange error in matrix inversion
         C_arr=(epsilon_0*eps_rel*mu_0)*L_inv
         G_arr=np.reshape(mu_0*sigma_diel, (num_freq,1,1))*L_inv; 
         R_arr=self._calculate_r_matrix()
@@ -347,6 +347,8 @@ class Simulation:
         z_values,dz=np.linspace(0, self.get_geo().get_length(), self.get_zsamples(), endpoint=False, retstep=True)
         for idx in range(self.get_zsamples()):
             z=z_values[idx]
+            if idx % 10==0: #every 10 steps
+                print(f"Calculating for z={z}")
             r_arr,c_arr,l_arr, g_arr=self._rclg_function(z)
             z_arr=r_arr+1j*2*pi*f*l_arr
             y_arr=g_arr+1j*2*pi*f*c_arr

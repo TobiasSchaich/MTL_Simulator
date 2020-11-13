@@ -269,7 +269,7 @@ class Geometry:
         for wir in self._wires:
             wir_pos=np.array(wir.get_position())
             x=np.repeat(wir_pos[0],zsamples)
-            y=np.repeat(wir_pos[0],zsamples)
+            y=np.repeat(wir_pos[1],zsamples)
             ax.plot(x, y, z)
         ax.view_init(elev, angle)    
         plt.show()

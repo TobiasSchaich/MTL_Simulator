@@ -51,7 +51,7 @@ if __name__=='__main__':
     Nsamples=cable_length*2
     sim=simulation.Simulation(geo, em, Nsamples)
     abcd=sim.run()
-    #s = rf.a2s(abcd)conda 
+    #s = rf.a2s(abcd) 
     
     s=sparameter.Sparameter()
     s.create_from_abcd(freq, abcd)
