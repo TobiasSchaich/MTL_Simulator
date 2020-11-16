@@ -28,6 +28,7 @@ class Simulation:
         self.set_em(em)
         self.set_zsamples(zsamples)
         self._identical_wires_flag=False
+        self._clg_function=None
         
     def set_geo(self, geo):
         if isinstance(geo, geometry.Geometry):
@@ -61,9 +62,9 @@ class Simulation:
         self._chk_geo()
         mode=self._get_mode() # coated,uncoated,mixed if geometry consists of respective wires types
         if mode=='uncoated':
-            self._rclg_function=self._calculate_rclg_uncoated 
+            self._clg_function=self._calculate_clg_uncoated 
         elif mode=='coated':
-            self._rclg_function=self._calculate_rclg_coated 
+            self._clg_function=self._calculate_clg_coated 
         elif mode=='mixed':
             print("Warning: Experimental Mode - not yet checked for errors")
             raise NotImplementedError("Coated wires solution not yet implemented")
@@ -164,14 +165,13 @@ class Simulation:
         be=np.sqrt(ed*k0**2-ga**2)
         return np.array([be,ga])
     
-    def _calculate_rclg_coated(self, z): 
+    def _clg_identical_coated(self, z): 
         be,gd,g=self.goubau() #Note that g is real instead of complex for increased computational accuracy (ga=1j*g)
         num_cond=self.get_geo().get_num_wires_total()   
         num_freq=np.size(self.get_em().get_freq())
         #all radii are equal for now
         radius_coating=self.get_geo().get_all_wires()[0].get_radius_coating()
-        radius=self.get_geo().get_all_wires()[0].get_radius()
-        sigma=self.get_geo().get_all_wires()[0].get_sigma()        
+        radius=self.get_geo().get_all_wires()[0].get_radius()       
         z0 = lambda r : yn(0,gd*radius)*jv(0,gd*r)-yn(0,gd*r)*jv(0,gd*radius) #define z0,z1 function
         z1 = lambda r : yn(0,gd*radius)*jv(1,gd*r)-yn(1,gd*r)*jv(0,gd*radius)
         # get wire positions
@@ -185,11 +185,9 @@ class Simulation:
         L_self=-mu_0/(2*pi*radius)*(z0(radius_coating)/(gd*z1(radius)) - z1(radius_coating)*kn(0, g*radius_coating)/(g*z1(radius)*kn(1,g*radius_coating)))#values for each frequency
         L_arr=L_arr*np.reshape(L_self, (num_freq,1,1)) #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples        
         for ind1 in range(num_cond):
-             for ind2 in range((ind1+1),num_cond):
-                 L_arr[:,ind1,ind2]=mu_0/(2*pi*g*radius)*(z1(radius_coating)*kn(0,g*np.linalg.norm(pos[ind1]-pos[ind2]))/(z1(radius)*kn(1,g*radius_coating)));
-                 L_arr[:,ind2,ind1]=L_arr[:,ind1,ind2]
-        delta=np.sqrt(1/(pi*self.get_em().get_freq()*mu_0*sigma));
-        R_arr=np.tile(np.eye(num_cond),(num_freq,1,1))*np.reshape(1/(2*pi*radius*delta*sigma), (num_freq,1,1));
+              for ind2 in range((ind1+1),num_cond):
+                  L_arr[:,ind1,ind2]=mu_0/(2*pi*g*radius)*(z1(radius_coating)*kn(0,g*np.linalg.norm(pos[ind1]-pos[ind2]))/(z1(radius)*kn(1,g*radius_coating)));
+                  L_arr[:,ind2,ind1]=L_arr[:,ind1,ind2]
         #calculate Capacitance and conductance Matrix 
         ed_air=self.get_em().get_eps_rel()
         loss_tan_coating=self.get_geo().get_all_wires()[0].get_loss_tan()
@@ -199,26 +197,32 @@ class Simulation:
             ed_coating=self.get_geo().get_all_wires()[0].get_ed_coating()
         P_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init, create 3D unity matrix
         P_self=-z1(radius_coating)/(2*pi*radius*epsilon_0*z1(radius)) * (z0(radius_coating)/
-             (ed_coating*gd*z1(radius_coating))-kn(0,g*radius_coating)/(ed_air*g*kn(1, g*radius_coating))) #values for each frequency
+              (ed_coating*gd*z1(radius_coating))-kn(0,g*radius_coating)/(ed_air*g*kn(1, g*radius_coating))) #values for each frequency
         P_arr=P_arr*np.reshape(P_self, (num_freq,1,1)) #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples        
         for ind1 in range(num_cond):
-             for ind2 in range((ind1+1),num_cond):
-                 P_arr[:,ind1,ind2]=1/(2*pi*epsilon_0*g*radius)*(z1(radius_coating)*kn(0,g*np.linalg.norm(pos[ind1]-pos[ind2]))/(z1(radius)*kn(1,g*radius_coating)));
-                 P_arr[:,ind2,ind1]=P_arr[:,ind1,ind2]
+              for ind2 in range((ind1+1),num_cond):
+                  P_arr[:,ind1,ind2]=1/(2*pi*epsilon_0*g*radius)*(z1(radius_coating)*kn(0,g*np.linalg.norm(pos[ind1]-pos[ind2]))/(z1(radius)*kn(1,g*radius_coating)));
+                  P_arr[:,ind2,ind1]=P_arr[:,ind1,ind2]
         C=np.linalg.inv(P_arr)
         C_arr=np.real(C)
         G_arr=-2*pi*np.reshape(self.get_em().get_freq(), (num_freq,1,1))*np.imag(C)
-        return R_arr, C_arr, L_arr, G_arr                
-        
-    def _calculate_rclg_uncoated(self, z): 
+        return C_arr, L_arr, G_arr                
+    
+    def _calculate_clg_coated(self, z): 
         if self._identical_wires_flag:
-            return self._rclg_identical_uncoated(z)
+            return self._clg_identical_coated(z)
         else:
-            # raise NotImplementedError("RCLG calculation for unidentical wires not yet there.")
-            return self._rclg_unidentical_uncoated(z)
+            raise NotImplementedError("Coated wires of different radii not yet implemented")
+            return self._clg_unidentical_uncoated(z)
         
-    def _rclg_identical_uncoated(self, z):
-        """Calculates RCLG matrices for setup with all wires equal"""
+    def _calculate_clg_uncoated(self, z): 
+        if self._identical_wires_flag:
+            return self._clg_identical_uncoated(z)
+        else:
+            return self._clg_unidentical_uncoated(z)
+        
+    def _clg_identical_uncoated(self, z):
+        """Calculates CLG matrices for setup with all wires equal"""
         be,ga=self._sommer()
         eps_rel=self.get_em().get_eps_rel()
         num_cond=self.get_geo().get_num_wires_total()   
@@ -242,13 +246,10 @@ class Simulation:
         #L_inv=np.linalg.inv(L_arr)
         #C_arr=(epsilon_0*eps_rel*mu_0)*L_inv
         G_arr=np.reshape(self.get_em().get_sigma_diel(), (num_freq,1,1))/(epsilon_0*eps_rel)*C_arr
-        # delta=np.sqrt(1/(pi*self.get_em().get_freq()*mu_0*sigma))
-        # R_arr=np.tile(np.eye(num_cond),(num_freq,1,1))*np.reshape(1/(2*pi*radius*delta*sigma), (num_freq,1,1))
-        R_arr=self._calculate_r_matrix()
-        return R_arr, C_arr, L_arr, G_arr
+        return C_arr, L_arr, G_arr
     
-    def _rclg_unidentical_uncoated(self, z):
-        """Calculates RCLG for setup with wires of different radius or conductivity"""
+    def _clg_unidentical_uncoated(self, z):
+        """Calculates CLG for setup with wires of different radius or conductivity"""
         propa=self._sommer() # propagation array axis0-be,ga, axis1-frequency, axis2-wire
         num_cond=self.get_geo().get_num_wires_total()   
         num_freq=np.size(self.get_em().get_freq())
@@ -276,10 +277,10 @@ class Simulation:
         L_inv[0,:,:]=np.linalg.inv(L_arr[0,:,:])#fix for strange error in matrix inversion
         C_arr=(epsilon_0*eps_rel*mu_0)*L_inv
         G_arr=np.reshape(mu_0*sigma_diel, (num_freq,1,1))*L_inv; 
-        R_arr=self._calculate_r_matrix()
-        return R_arr, C_arr, L_arr, G_arr
+        return C_arr, L_arr, G_arr
     
     def _calculate_r_matrix(self):
+        """Calculates resistance matrix for coated and uncoated wires"""
         sigs=[wir.get_sigma() for wir in self.get_geo().get_all_wires()]
         radii=[wir.get_radius() for wir in self.get_geo().get_all_wires()]
         freqs=self.get_em().get_freq()
@@ -306,6 +307,7 @@ class Simulation:
     def _get_mode(self):
         if all([wir.get_wiretype()=='coated' for wir in self.get_geo().get_all_wires()]):
             mode='coated'
+            raise NotImplementedError(" Geometries with coated wires not yet implemented.")
         elif all([wir.get_wiretype()=='uncoated' for wir in self.get_geo().get_all_wires()]):
             mode='uncoated'
         else:
@@ -345,11 +347,12 @@ class Simulation:
         abcd=np.tile(np.eye(2*num_wires,2*num_wires), (num_freq, 1, 1))
         abcd = abcd.astype(np.complex128, copy=False)
         z_values,dz=np.linspace(0, self.get_geo().get_length(), self.get_zsamples(), endpoint=False, retstep=True)
+        r_arr=self._calculate_r_matrix() #independent of z
         for idx in range(self.get_zsamples()):
             z=z_values[idx]
             if idx % 10==0: #every 10 steps
                 print(f"Calculating for z={z}")
-            r_arr,c_arr,l_arr, g_arr=self._rclg_function(z)
+            c_arr,l_arr, g_arr=self._clg_function(z)
             z_arr=r_arr+1j*2*pi*f*l_arr
             y_arr=g_arr+1j*2*pi*f*c_arr
             A=np.concatenate((np.concatenate((np.zeros((num_freq,num_wires, num_wires)), -z_arr), axis=2),

@@ -14,7 +14,7 @@ import skrf as rf
 
 if __name__=='__main__':
     
-    cable_length=6
+    cable_length=1
     twistlength=1e-1
     freq=np.linspace(1e9,6e9, 901)
     eps_r=1.17
