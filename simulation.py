@@ -204,6 +204,7 @@ class Simulation:
                   P_arr[:,ind1,ind2]=1/(2*pi*epsilon_0*g*radius)*(z1(radius_coating)*kn(0,g*np.linalg.norm(pos[ind1]-pos[ind2]))/(z1(radius)*kn(1,g*radius_coating)));
                   P_arr[:,ind2,ind1]=P_arr[:,ind1,ind2]
         C=np.linalg.inv(P_arr)
+        C[0,:,:]=np.linalg.inv(P_arr[0,:,:])#fix for strange error in matrix inversion on my desktop only
         C_arr=np.real(C)
         G_arr=-2*pi*np.reshape(self.get_em().get_freq(), (num_freq,1,1))*np.imag(C)
         return C_arr, L_arr, G_arr                
@@ -307,7 +308,7 @@ class Simulation:
     def _get_mode(self):
         if all([wir.get_wiretype()=='coated' for wir in self.get_geo().get_all_wires()]):
             mode='coated'
-            raise NotImplementedError(" Geometries with coated wires not yet implemented.")
+            #raise NotImplementedError(" Geometries with coated wires not yet implemented.")
         elif all([wir.get_wiretype()=='uncoated' for wir in self.get_geo().get_all_wires()]):
             mode='uncoated'
         else:

@@ -52,7 +52,7 @@ class CoatedWire(Wire):
 class TwistedPair:
     """ Creates a Twisted Pair in 3-Dimensional Space"""
     
-    def __init__(self, wire1, wire2, pitch: tuple, length:float = 1.):
+    def __init__(self, wire1, wire2, pitch: tuple, length: float = 1.):
         if not all((isinstance(wire1, Wire), isinstance(wire2, Wire))):
             raise TypeError("wire1 and wire2 objects must be of type Wire")
         #Pitch can be Tuple with different pitch lengths if alternating along cable
