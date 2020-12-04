@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 24 15:10:46 2020
+Created on Fri Nov 27 11:06:02 2020
 
 @author: Tobias
 """
+
+
 
 import geometry
 import em_env 
@@ -15,15 +17,15 @@ import random
 import scipy.io as sio
 
 if __name__=='__main__':    
-    d=1.08*1e-3
-    cable_length=0.03
-    twistlength=0.03
+    d=1.*1e-3
+    cable_length=0.05
+    twistlength=0.05
     # random.seed(0)
     # twistlength=[]
     # while sum(twistlength) < cable_length:
     #     twistlength.append(0.065+(0.065*0.3*random.uniform(-1,1))) 
     # twistlength=tuple(twistlength)
-    freq=np.linspace(2*1e9,7e9, 901)
+    freq=np.linspace(1*1e9, 10e9, 901)
     eps_r=1
     loss_t=0    
     em=em_env.EmEnv(freq,eps_rel=eps_r, loss_tan=loss_t) #set em env
@@ -32,24 +34,22 @@ if __name__=='__main__':
     geo=geometry.Geometry()
     geo.set_length(cable_length)
     # define wires
-    wir1=geometry.CoatedWire((0,-d),  ed_coating = 3, loss_tan = 0.01)
-    wir2=geometry.CoatedWire((0,0),  ed_coating = 3, loss_tan = 0.01)
-    wir3=geometry.CoatedWire((0,1*1e-2),  ed_coating = 3, loss_tan = 00.01)
-    pair=geometry.TwistedPair(wir2,wir3,twistlength, cable_length)
+    wir1=geometry.Wire((0,d/2))
+    wir2=geometry.Wire((0,-d/2))
+    wir3=geometry.Wire((0,d))
+    pair=geometry.TwistedPair(wir1,wir2,twistlength, cable_length)
     # add wires
-    geo.add_wire(wir1)
-    # geo.add_wire(wir2)
-    # geo.add_wire(wir3)
+    geo.add_wire(wir3)
     geo.add_pair(pair)
-    #geo.plot_geometry(z_max=0.065)
+    geo.plot_geometry(z_max=0.05)
     
     # set up simulation
-    Nsamples=int(cable_length*4000)
+    Nsamples=int(cable_length*2000)
     sim=simulation.Simulation(geo, em, Nsamples)
     abcd=sim.run()
     abcd_orig=abcd
-    sio.savemat('Jumper_Wire.mat', {'f': freq, 'abcd': abcd_orig})
-    abcd=np.linalg.matrix_power(abcd_orig, 15)
+    #sio.savemat('Wire.mat', {'f': freq, 'abcd': abcd_orig})
+    abcd=np.linalg.matrix_power(abcd_orig, 20)
     
     
     s=sparameter.Sparameter()
@@ -64,7 +64,7 @@ if __name__=='__main__':
     
     #s.plot()
     #z=np.linspace(1400,1800)
-    z=[900]
+    z=[1200]
     for imp in z:
         ntw = rf.Network(frequency=freq, s=s_sw)
         ntw.renormalize(imp)
