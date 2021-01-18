@@ -166,6 +166,8 @@ class Simulation:
         return np.array([be,ga])
     
     def _clg_identical_coated(self, z): 
+        ed_air=self.get_em().get_eps_rel()
+        ed_coating=self.get_geo().get_all_wires()[0].get_ed_coating_complex()
         be,gd,g=self.goubau() #Note that g is real instead of complex for increased computational accuracy (ga=1j*g)
         num_cond=self.get_geo().get_num_wires_total()   
         num_freq=np.size(self.get_em().get_freq())
@@ -176,8 +178,8 @@ class Simulation:
         z1 = lambda r : yn(0,gd*radius)*jv(1,gd*r)-yn(1,gd*r)*jv(0,gd*radius)
         #calculate Inductance Matrix
         L_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init, create 3D unity matrix
-        L_self=-mu_0/(2*pi*radius)*(z0(radius_coating)/(gd*z1(radius))-
-                                    z1(radius_coating)*kn(0, g*radius_coating)/(g*z1(radius)*kn(1,g*radius_coating)))#values for each frequency
+        L_self=-mu_0/(2*pi*radius)*z0(radius_coating)/(gd*z1(radius))*(1+
+                                    gd**2*ed_air/(g**2*np.real(ed_coating))) #values for each frequency
         L_arr=L_arr*np.reshape(L_self, (num_freq,1,1)) #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples        
         for ind1 in range(num_cond):
               for ind2 in range((ind1+1),num_cond):
@@ -185,19 +187,18 @@ class Simulation:
                   L_arr[:,ind1,ind2]=mu_0/(2*pi*g*radius)*(z1(radius_coating)*kn(0,g*dist)/(z1(radius)*kn(1,g*radius_coating)));
                   L_arr[:,ind2,ind1]=L_arr[:,ind1,ind2]
         #calculate Capacitance and conductance Matrix 
-        ed_air=self.get_em().get_eps_rel()
-        ed_coating=self.get_geo().get_all_wires()[0].get_ed_coating_complex()
         P_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init, create 3D unity matrix
         P_self=-z1(radius_coating)/(2*pi*radius*epsilon_0*z1(radius)) * (z0(radius_coating)/
               (ed_coating*gd*z1(radius_coating))-kn(0,g*radius_coating)/(ed_air*g*kn(1, g*radius_coating))) #values for each frequency
         P_arr=P_arr*np.reshape(P_self, (num_freq,1,1)) #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples        
         for ind1 in range(num_cond):
               for ind2 in range((ind1+1),num_cond):
-                  P_arr[:,ind1,ind2]=1/(2*pi*epsilon_0*g*radius)*(z1(radius_coating)*kn(0,g*np.linalg.norm(pos[ind1]-pos[ind2]))/(z1(radius)*kn(1,g*radius_coating)));
+                  dist=np.linalg.norm(pos[ind1]-pos[ind2])
+                  P_arr[:,ind1,ind2]=1/(2*pi*epsilon_0*g*radius)*(z1(radius_coating)*kn(0,g*dist)/(z1(radius)*kn(1,g*radius_coating)));
                   P_arr[:,ind2,ind1]=P_arr[:,ind1,ind2]
-        C=np.linalg.inv(P_arr)
+        C=np.linalg.inv(P_arr) # Extract complex C-matrix
         C[0,:,:]=np.linalg.inv(P_arr[0,:,:])#fix for strange error in matrix inversion on my desktop only
-        C_arr=np.real(C)
+        C_arr=np.real(C) #capacitance matrix is real of complex C-Matrix
         G_arr=-2*pi*np.reshape(self.get_em().get_freq(), (num_freq,1,1))*np.imag(C)
         return C_arr, L_arr, G_arr                
     
