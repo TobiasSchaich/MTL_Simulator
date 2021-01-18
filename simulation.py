@@ -222,7 +222,6 @@ class Simulation:
         num_cond=self.get_geo().get_num_wires_total()   
         num_freq=np.size(self.get_em().get_freq())
         radius=self.get_geo().get_all_wires()[0].get_radius()
-        sigma=self.get_geo().get_all_wires()[0].get_sigma()
         pos=self.get_geo().get_all_positions(z) #wire positions as list of (2,) numpy arrays carrying x and y information
         #calculate clg matrix
         L_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init
