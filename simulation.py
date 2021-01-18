@@ -79,7 +79,7 @@ class Simulation:
         tol=1e-10       # tolerance for itteration
         Nmax = 4e4      # max no. iterations
         r=.1            # relaxation parameter for itteration
-        ##################get environment and cable characteristics###################################
+        # variables via em_env class
         freq=np.array(self.get_em().get_freq())
         ed=self.get_em().get_eps_rel()
         w = 2*pi*freq;
@@ -101,7 +101,7 @@ class Simulation:
             raise NotImplementedError("Wires with unequal coatings dielectrics not yet implemented")   
         if ed_coating<ed:
             raise ValueError("Environment must have lower dielectric constant than coating for a bound SW solution")
-        ###################Itteration###########################################
+        #Itteration 
         be0 = 0.999*k0*np.sqrt(ed_coating) #start value for iteration
         N = 1;
         be = be0;       # initialize iteration
@@ -169,32 +169,24 @@ class Simulation:
         be,gd,g=self.goubau() #Note that g is real instead of complex for increased computational accuracy (ga=1j*g)
         num_cond=self.get_geo().get_num_wires_total()   
         num_freq=np.size(self.get_em().get_freq())
-        #all radii are equal for now
         radius_coating=self.get_geo().get_all_wires()[0].get_radius_coating()
-        radius=self.get_geo().get_all_wires()[0].get_radius()       
+        radius=self.get_geo().get_all_wires()[0].get_radius()   
+        pos=self.get_geo().get_all_positions(z)
         z0 = lambda r : yn(0,gd*radius)*jv(0,gd*r)-yn(0,gd*r)*jv(0,gd*radius) #define z0,z1 function
         z1 = lambda r : yn(0,gd*radius)*jv(1,gd*r)-yn(1,gd*r)*jv(0,gd*radius)
-        # get wire positions
-        pos_wires=[np.array(self.get_geo().get_wire(idx).get_position()) for idx in range(self.get_geo().get_num_single_wires())]
-        pos_pairs=[np.transpose(self.get_geo().get_pair(idx).get_xy(z)) for idx in range(self.get_geo().get_num_pairs())]
-        pos_pairs=[np.hsplit(np.ravel(pos_pairs[idx]),2) for idx in range(self.get_geo().get_num_pairs())] # get position as xy array
-        pos_pairs=[val for wir in pos_pairs for val in wir] # flatten list
-        pos=pos_wires+pos_pairs
-        #calculate Inductance and Resistance Matrix
+        #calculate Inductance Matrix
         L_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init, create 3D unity matrix
-        L_self=-mu_0/(2*pi*radius)*(z0(radius_coating)/(gd*z1(radius)) - z1(radius_coating)*kn(0, g*radius_coating)/(g*z1(radius)*kn(1,g*radius_coating)))#values for each frequency
+        L_self=-mu_0/(2*pi*radius)*(z0(radius_coating)/(gd*z1(radius))-
+                                    z1(radius_coating)*kn(0, g*radius_coating)/(g*z1(radius)*kn(1,g*radius_coating)))#values for each frequency
         L_arr=L_arr*np.reshape(L_self, (num_freq,1,1)) #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples        
         for ind1 in range(num_cond):
               for ind2 in range((ind1+1),num_cond):
-                  L_arr[:,ind1,ind2]=mu_0/(2*pi*g*radius)*(z1(radius_coating)*kn(0,g*np.linalg.norm(pos[ind1]-pos[ind2]))/(z1(radius)*kn(1,g*radius_coating)));
+                  dist=np.linalg.norm(pos[ind1]-pos[ind2])
+                  L_arr[:,ind1,ind2]=mu_0/(2*pi*g*radius)*(z1(radius_coating)*kn(0,g*dist)/(z1(radius)*kn(1,g*radius_coating)));
                   L_arr[:,ind2,ind1]=L_arr[:,ind1,ind2]
         #calculate Capacitance and conductance Matrix 
         ed_air=self.get_em().get_eps_rel()
-        loss_tan_coating=self.get_geo().get_all_wires()[0].get_loss_tan()
-        if loss_tan_coating!=0:
-            ed_coating=self.get_geo().get_all_wires()[0].get_ed_coating()*(1-1j*loss_tan_coating)
-        else:
-            ed_coating=self.get_geo().get_all_wires()[0].get_ed_coating()
+        ed_coating=self.get_geo().get_all_wires()[0].get_ed_coating_complex()
         P_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init, create 3D unity matrix
         P_self=-z1(radius_coating)/(2*pi*radius*epsilon_0*z1(radius)) * (z0(radius_coating)/
               (ed_coating*gd*z1(radius_coating))-kn(0,g*radius_coating)/(ed_air*g*kn(1, g*radius_coating))) #values for each frequency
@@ -231,21 +223,19 @@ class Simulation:
         radius=self.get_geo().get_all_wires()[0].get_radius()
         sigma=self.get_geo().get_all_wires()[0].get_sigma()
         pos=self.get_geo().get_all_positions(z) #wire positions as list of (2,) numpy arrays carrying x and y information
-     
+        #calculate clg matrix
         L_arr=np.tile(np.eye(self.get_geo().get_num_wires_total()), (num_freq,1,1))#init
         L_self=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*radius)/hankel1(1,ga*radius);#values for each frequency
         L_arr=L_arr*np.reshape(L_self, (num_freq,1,1))
         #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples   
-     
         for ind1 in range(num_cond):
              for ind2 in range((ind1+1),num_cond):
-                 L_arr[:,ind1,ind2]=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*np.linalg.norm(pos[ind1]-pos[ind2]))/hankel1(1,ga*radius)
+                 dist=np.linalg.norm(pos[ind1]-pos[ind2])
+                 L_arr[:,ind1,ind2]=(mu_0/(2*pi*ga*radius))*hankel1(0,ga*dist)/hankel1(1,ga*radius)
                  L_arr[:,ind2,ind1]=L_arr[:,ind1,ind2]
         P_arr=1/(epsilon_0*eps_rel*mu_0)*L_arr
         C_arr=np.linalg.inv(P_arr)
         C_arr[0,:,:]=np.linalg.inv(P_arr[0,:,:])#fix for strange error in matrix inversion on my desktop only
-        #L_inv=np.linalg.inv(L_arr)
-        #C_arr=(epsilon_0*eps_rel*mu_0)*L_inv
         G_arr=np.reshape(self.get_em().get_sigma_diel(), (num_freq,1,1))/(epsilon_0*eps_rel)*C_arr
         return C_arr, L_arr, G_arr
     
@@ -254,18 +244,16 @@ class Simulation:
         propa=self._sommer() # propagation array axis0-be,ga, axis1-frequency, axis2-wire
         num_cond=self.get_geo().get_num_wires_total()   
         num_freq=np.size(self.get_em().get_freq())
-        freqs=self.get_em().get_freq()
         eps_rel=self.get_em().get_eps_rel()
         sigma_diel=self.get_em().get_sigma_diel()
         radii=[wir.get_radius() for wir in self.get_geo().get_all_wires()]
-        sigs=[wir.get_sigma() for wir in self.get_geo().get_all_wires()]
         pos=self.get_geo().get_all_positions(z) #wire positions as list of (2,) numpy arrays carrying x and y information
      
         L_arr=np.empty((num_freq, num_cond,num_cond), dtype=np.complex128)#init
         #L_arr is 3D array with axis=0 - frequency samples, and axis2,3 being wire samples   
         for ind1 in range(num_cond):
               for ind2 in range(num_cond):
-                  be=propa[0,:,ind2]
+                  #be=propa[0,:,ind2] # not needed 
                   ga=propa[1,:,ind2]
                   radius=radii[ind1]
                   if ind1!=ind2:

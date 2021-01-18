@@ -48,6 +48,15 @@ class CoatedWire(Wire):
     
     def get_loss_tan(self):
         return self._loss_tan
+    
+    def get_ed_coating_complex(self):
+        loss_tan_coating=self.get_loss_tan()
+        ed=self.get_ed_coating()
+        if loss_tan_coating!=0:
+            ed_coating=ed*(1-1j*loss_tan_coating)
+        else:
+            ed_coating=ed
+        return ed_coating
          
 class TwistedPair:
     """ Creates a Twisted Pair in 3-Dimensional Space"""

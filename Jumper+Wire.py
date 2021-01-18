@@ -48,7 +48,7 @@ if __name__=='__main__':
     sim=simulation.Simulation(geo, em, Nsamples)
     abcd=sim.run()
     abcd_orig=abcd
-    sio.savemat('Jumper_Wire.mat', {'f': freq, 'abcd': abcd_orig})
+    #sio.savemat('Jumper_Wire.mat', {'f': freq, 'abcd': abcd_orig})
     abcd=np.linalg.matrix_power(abcd_orig, 100)
     
     
