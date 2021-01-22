@@ -15,7 +15,7 @@ import random
 import scipy.io as sio
 
 if __name__=='__main__':    
-    d=1*1e-2#1.08*1e-3
+    d=0.8*1e-2#1.08*1e-3
     cable_length=0.03
     twistlength=0.03
     # random.seed(0)
@@ -23,7 +23,7 @@ if __name__=='__main__':
     # while sum(twistlength) < cable_length:
     #     twistlength.append(0.065+(0.065*0.3*random.uniform(-1,1))) 
     # twistlength=tuple(twistlength)
-    freq=np.linspace(1*1e9,10e9, 901)
+    freq=np.linspace(1*1e9,8e9, 1001)
     eps_r=1
     loss_t=0    
     em=em_env.EmEnv(freq,eps_rel=eps_r, loss_tan=loss_t) #set em env
@@ -49,24 +49,26 @@ if __name__=='__main__':
     abcd=sim.run()
     abcd_orig=abcd
     #sio.savemat('Jumper_Wire.mat', {'f': freq, 'abcd': abcd_orig})
-    abcd=np.linalg.matrix_power(abcd_orig, 100)
+    abcd=np.linalg.matrix_power(abcd_orig, 33)
     
     
     s=sparameter.Sparameter()
     s.create_from_abcd(freq, abcd)
     paras=s.get_s()
-    dum=1/np.sqrt(3)
-    M=np.array([[dum,dum,dum,0,0,0],[0,0,0,dum,dum,dum]])
+    dum=1/np.sqrt(2)
+    M=np.array([[1,0,0,0,0,0],[0,0,0,0,dum,dum]])
     s_sw=np.empty((np.size(freq),2,2), dtype=np.complex128)
     for idx in range(np.size(freq)):
         s_parameters=np.reshape(paras[idx,:,:],(6,6))
         s_sw[idx,:,:]=np.dot(np.dot(M,s_parameters),M.T)
     
     #s.plot()
-    #z=np.linspace(1400,1800)
+    #z=np.linspace(100,1800)
+    
     z=[500]
     for imp in z:
         ntw = rf.Network(frequency=freq, s=s_sw)
+        ntw.write_touchstone("TWP+Wire_TEST"+".s2p", )
         ntw.renormalize(imp)
         s_renorm=sparameter.Sparameter()
         s_renorm.set_freq(freq)
@@ -75,4 +77,4 @@ if __name__=='__main__':
         s_renorm.plot(ports=(1,1))
         # name=f"Pitch_{twistlength}_d_{d:.5f}"
         # sio.savemat(name+".mat", {'f': freq, 'abcd': abcd})
-        # ntw.write_touchstone(name+".s2p", )
+        #ntw.write_touchstone("TWP+Wire_dist0.3cm"+".s2p", )

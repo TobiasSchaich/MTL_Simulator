@@ -337,6 +337,7 @@ class Simulation:
         abcd = abcd.astype(np.complex128, copy=False)
         z_values,dz=np.linspace(0, self.get_geo().get_length(), self.get_zsamples(), endpoint=False, retstep=True)
         r_arr=self._calculate_r_matrix() #independent of z
+        #r_arr=0#for Debug and testing lossless systems only
         for idx in range(self.get_zsamples()):
             z=z_values[idx]
             if idx % 10==0: #every 10 steps
