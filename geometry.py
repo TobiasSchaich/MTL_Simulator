@@ -32,7 +32,7 @@ class Wire:
      
 class CoatedWire(Wire):
     
-    def __init__(self, position = (0,0),radius = 0.25*1e-3, sigma = 5.8*1e7, radius_coating = 0.54*1e-3, 
+    def __init__(self, position = (0,0), radius = 0.25*1e-3, sigma = 5.8*1e7, radius_coating = 0.54*1e-3, 
                  ed_coating = 3, loss_tan = 0):
         super().__init__(position,radius, sigma)
         self._wiretype='coated'

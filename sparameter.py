@@ -62,6 +62,17 @@ class Sparameter:
         c, d = np.split(np.split(abcd, 2,axis=1)[1], 2,axis=2)
         b = b/z0;
         c = c*z0;
+        condis=np.linalg.cond((a+b+c+d))
+        norms=np.linalg.norm((a+b+c+d),axis=(1,2))
+        idx_max=condis.argmax()
+        print(norms[idx_max])
+        print(np.log10(condis[idx_max]))
+        
+        plt.plot(freq,np.linalg.cond(a+b+c+d))
+        plt.xlabel("Frequency")
+        plt.ylabel("Problem Condition Number")
+        plt.yscale('log')
+        plt.show()
         
        # Choose the optimal math depending on the size of the network parameter
         if num_ports == 2:
@@ -76,10 +87,10 @@ class Sparameter:
             idx = np.arange(int(num_ports/2))
             identity_3d[:, idx, idx] = 1
             s21 = np.linalg.solve(a+b+c+d, 2.*identity_3d)
-            s22 = np.linalg.solve(a+b+c+d, (-a+b-c+d))
+            s22 = -1/2*s21@(a-b+c-d)
             s11 = 1/2*(a+b-c-d)@s21
             s12 = 1/2*((a+b-c-d)@s22+(a-b-c+d))
-            sparams=np.concatenate((np.concatenate((s11,s12), axis=1), np.concatenate((s21, s22), axis=1)), axis=2)
+            sparams=np.concatenate((np.concatenate((s11,s12), axis=2), np.concatenate((s21, s22), axis=2)), axis=1)
         self.set_freq(freq)
         self.set_z0(z0)
         self.set_s(sparams)
